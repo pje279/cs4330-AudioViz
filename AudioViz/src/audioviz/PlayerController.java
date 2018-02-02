@@ -9,6 +9,8 @@ import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
@@ -78,6 +80,8 @@ public class PlayerController implements Initializable {
     private Visualizer currentVisualizer;
     private final Integer[] bandsList = {1, 2, 4, 8, 16, 20, 40, 60, 100, 120, 140};
     
+    private static final double MINIMUM_CHANGE = 500;
+    
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         bandsText.setText(Integer.toString(numBands));
@@ -105,6 +109,30 @@ public class PlayerController implements Initializable {
             });
             bandsMenu.getItems().add(menuItem);
         }
+        
+        //mediaPlayer.seek(Duration.millis(timeSlider.getValue()));
+        
+        ChangeListener<Boolean> lambdaChangeListenerDrag = (observable, oldValue, newValue) -> {
+            if (!timeSlider.isValueChanging())
+            {
+                mediaPlayer.seek(Duration.millis(timeSlider.getValue()));
+            } //End if (!timeSlider.isValueChanging())
+        };
+        
+        ChangeListener<Number> lambdaChangeListenerClick = (observable, oldValue, newValue) -> {
+            if (!timeSlider.isValueChanging())
+            {
+                double currentTime = mediaPlayer.getCurrentTime().toMillis();
+                if (Math.abs(currentTime - timeSlider.getValue()) > MINIMUM_CHANGE)
+                {
+                    mediaPlayer.seek(Duration.millis(timeSlider.getValue()));
+                } //End if (Math.abs(currentTime - timeSlider.getValue()) > MINIMUM_CHANGE)
+            } //End if (!timeSlider.isValueChanging())
+        };
+        
+        timeSlider.valueChangingProperty().addListener(lambdaChangeListenerDrag);
+        timeSlider.valueProperty().addListener(lambdaChangeListenerClick);
+        
     }
     
     private void selectVisualizer(ActionEvent event) {
@@ -165,9 +193,11 @@ public class PlayerController implements Initializable {
     
     private void handleReady() {
         Duration duration = mediaPlayer.getTotalDuration();
-        lengthText.setText(duration.toString());
+        //lengthText.setText(duration.toString());
+        lengthText.setText(String.format("%.1f", duration.toMillis()));
         Duration ct = mediaPlayer.getCurrentTime();
-        currentText.setText(ct.toString());
+        //currentText.setText(ct.toString());
+        currentText.setText(String.format("%.1f", ct.toMillis()));
         currentVisualizer.start(numBands, vizPane);
         timeSlider.setMin(0);
         timeSlider.setMax(duration.toMillis());
@@ -182,8 +212,13 @@ public class PlayerController implements Initializable {
     private void handleUpdate(double timestamp, double duration, float[] magnitudes, float[] phases) {
         Duration ct = mediaPlayer.getCurrentTime();
         double ms = ct.toMillis();
-        currentText.setText(Double.toString(ms));
-        timeSlider.setValue(ms);
+        //currentText.setText(Double.toString(ms));
+        currentText.setText(String.format("%.1f", ms));
+        //timeSlider.setValue(ms);
+        if (!timeSlider.isValueChanging())
+        {
+            timeSlider.setValue(ms);
+        } //End if (!timeSlider.isValueChanging())
         
         currentVisualizer.update(timestamp, duration, magnitudes, phases);
     }
